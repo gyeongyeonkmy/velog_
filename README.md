@@ -1,5 +1,7 @@
 # velog_
 
+Velog posts are archived under `posts/<year>/` and synced automatically from RSS.
+
 ## Local setup
 
 ```bash
