@@ -1,28 +1,31 @@
-import feedparser
-import git
 import os
+from pathlib import Path
+
+import feedparser
 
 # 벨로그 RSS 피드 URL
 # example : rss_url = 'https://api.velog.io/rss/@soozi'
 rss_url = 'https://api.velog.io/rss/@gyeongyeonk'
 
-# 깃허브 레포지토리 경로
-repo_path = '.'
+# 레포지토리 루트 기준 경로
+repo_path = Path(__file__).resolve().parents[1]
 
 # 'velog-posts' 폴더 경로
-posts_dir = os.path.join(repo_path, 'velog-posts')
+posts_dir = repo_path / 'velog-posts'
 
 # 'velog-posts' 폴더가 없다면 생성
-if not os.path.exists(posts_dir):
-    os.makedirs(posts_dir)
-
-# 레포지토리 로드
-repo = git.Repo(repo_path)
+posts_dir.mkdir(exist_ok=True)
 
 # RSS 피드 파싱
 feed = feedparser.parse(rss_url)
 
-# 각 글을 파일로 저장하고 커밋
+if getattr(feed, 'bozo', False):
+    print(f'RSS parse warning: {feed.bozo_exception}')
+
+print(f'Fetched {len(feed.entries)} entries from {rss_url}')
+
+# 각 글을 파일로 저장
+created_count = 0
 for entry in feed.entries:
     # 파일 이름에서 유효하지 않은 문자 제거 또는 대체
     file_name = entry.title
@@ -30,16 +33,12 @@ for entry in feed.entries:
     file_name = file_name.replace('\\', '-')  # 백슬래시를 대시로 대체
     # 필요에 따라 추가 문자 대체
     file_name += '.md'
-    file_path = os.path.join(posts_dir, file_name)
+    file_path = posts_dir / file_name
 
     # 파일이 이미 존재하지 않으면 생성
-    if not os.path.exists(file_path):
+    if not file_path.exists():
         with open(file_path, 'w', encoding='utf-8') as file:
             file.write(entry.description)  # 글 내용을 파일에 작성
+        created_count += 1
 
-        # 깃허브 커밋
-        repo.git.add(file_path)
-        repo.git.commit('-m', f'Add post: {entry.title}')
-
-# 변경 사항을 깃허브에 푸시
-repo.git.push()
+print(f'Created {created_count} new post files')
